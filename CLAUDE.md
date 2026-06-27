@@ -8,23 +8,39 @@
 
 ## 0. Current repository state (read first)
 
-**Phase 0 (Foundation) is built.** The non-embedded Shopify Remix app is scaffolded and
-verified: it typechecks, builds, and the crypto unit test passes. **Phases 1–6 are not
-built** — the Prisma schema is intentionally only `Shop` + `Session` (see §8 for the
-full model that Phase 1 adds). Work the next phase from `BUILD-PHASES.md`, one per
-session (§14).
+**Phases 0–1 are built.** The non-embedded Shopify Remix app plus the data model, webhook
+pipeline, order sync, and All Orders screen are in and verified offline (typecheck, build,
+13 unit tests pass). **Phases 2–6 are not built.** Work the next phase from
+`BUILD-PHASES.md`, one per session (§14). **Next up: Phase 2** (carrier adapters).
 
-What exists now (built in Phase 0):
+What exists now (Phase 0 — foundation):
 - Non-embedded OAuth/SSO flow (§2): `app/routes/_index.tsx` (entry decision) →
   `auth.$.tsx` (OAuth) → `afterAuth` in `app/shopify.server.ts` sets our own signed
   cookie → `/dashboard`. Login state cookie lives in `app/session.server.ts`.
 - `app/shopify.server.ts` — `shopifyApp({ isEmbeddedApp: false, useOnlineTokens: false })`
   with `PrismaSessionStorage`. `apiVersion` is omitted (library default = current stable).
-- Prisma + Postgres, models `Shop` + `Session` only (`prisma/schema.prisma`).
-- `app/lib/crypto.server.ts` — AES-256-GCM helpers (§9.3) + `crypto.server.test.ts`.
-- `app/redis.server.ts` (enqueue side) + `worker/` (BullMQ bootstrap, no jobs yet).
+- `app/lib/crypto.server.ts` — AES-256-GCM helpers (§9.3) + test.
+- `app/redis.server.ts` (enqueue side) + `worker/` (BullMQ).
 - Polaris shell `app/components/AppShell.tsx` driven by `app/lib/navigation.ts`.
 - `ecosystem.config.cjs` (PM2 `web` + `worker`), `.env.example`, `README.md`.
+
+What exists now (Phase 1 — data + sync):
+- **Full Prisma schema** (§8): all models + indexes + the `ShipmentStatus` enum (§6).
+  Baseline migration at `prisma/migrations/0_init/` (apply with `prisma migrate deploy`).
+- **Webhooks** (§9.4–9.5, §10): registered in `app/shopify.server.ts` (`afterAuth`
+  `registerWebhooks`); single HMAC-verified endpoint `app/routes/webhooks.tsx`; dedupe via
+  `WebhookLog(topic, payloadHash)`; heavy work ENQUEUED, never inline. Compliance topics
+  declared in `shopify.app.toml` `[webhooks.privacy_compliance]`. `app/uninstalled` marks
+  the shop uninstalled (`markShopUninstalled`).
+- **Order sync**: `app/services/orders.server.ts` (`upsertOrder`, `backfillOrders`); pure
+  mappers `app/lib/shopify/order-mapper.ts` (REST webhook + GraphQL shapes); plain GraphQL
+  client `app/lib/shopify/admin-graphql.server.ts` (worker has no Remix ctx). Backfill is
+  enqueued in `afterAuth` and consumed by `worker/processors/backfill.ts`.
+- **Queues**: names/types in `app/lib/queue-names.ts` (shared, pure); enqueue helpers in
+  `app/lib/queues.server.ts`; consumers in `worker/processors/`.
+- **All Orders screen**: `app/routes/orders.tsx` (Polaris IndexTable, status tabs, search,
+  pagination, status badges via `app/lib/order-status.ts`). Nav link is live in
+  `app/lib/navigation.ts`.
 
 ### Commands
 ```bash
@@ -61,9 +77,10 @@ Files in the repo and how they relate:
 | `JSY Logistics Dashboard.html` | ~430 KB **bundled visual design prototype** of the merchant dashboard. Use it as the UI/layout reference when building Polaris screens; it is not runnable app code. |
 | `docs/shopify-logistics-app-spec.md` | **Referenced everywhere as the FEATURE source of truth (the 16 modules) but DOES NOT EXIST yet.** If a phase needs feature detail from it, stop and ask the user for the spec rather than inventing module behavior. |
 
-**Next up: Phase 1** (full Prisma schema + indexes, webhooks incl. the 3 compliance
-topics, order backfill + sync, All Orders screen). Do not start it until asked — one
-phase per session.
+**Next up: Phase 2** (CarrierAdapter framework + registry, Delhivery + Shiprocket
+adapters, Logistics Config with encrypted creds + test mode, idempotent AWB + label/
+manifest PDFs, UsageRecord per shipment, adapter fixture tests). Do not start it until
+asked — one phase per session.
 
 ---
 

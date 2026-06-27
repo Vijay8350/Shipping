@@ -1,12 +1,14 @@
 import "@shopify/shopify-app-remix/adapters/node";
 import {
   AppDistribution,
+  DeliveryMethod,
   shopifyApp,
 } from "@shopify/shopify-app-remix/server";
 import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prisma";
 
 import prisma from "./db.server";
 import { encrypt } from "./lib/crypto.server";
+import { enqueueOrderBackfill } from "./lib/queues.server";
 import { commitShopSession, getShopSession } from "./session.server";
 
 /**
@@ -37,8 +39,20 @@ const shopify = shopifyApp({
   ...(process.env.SHOP_CUSTOM_DOMAIN
     ? { customShopDomains: [process.env.SHOP_CUSTOM_DOMAIN] }
     : {}),
+  // App-managed webhooks (CLAUDE.md §10). All delivered to /webhooks and HMAC-verified
+  // there. The 3 mandatory compliance topics (§9.5) are declared in shopify.app.toml
+  // (privacy_compliance) and hit the same endpoint.
+  webhooks: {
+    ORDERS_CREATE: { deliveryMethod: DeliveryMethod.Http, callbackUrl: "/webhooks" },
+    ORDERS_UPDATED: { deliveryMethod: DeliveryMethod.Http, callbackUrl: "/webhooks" },
+    ORDERS_CANCELLED: { deliveryMethod: DeliveryMethod.Http, callbackUrl: "/webhooks" },
+    FULFILLMENTS_CREATE: { deliveryMethod: DeliveryMethod.Http, callbackUrl: "/webhooks" },
+    APP_UNINSTALLED: { deliveryMethod: DeliveryMethod.Http, callbackUrl: "/webhooks" },
+  },
   hooks: {
     afterAuth: async ({ session }) => {
+      // Register the webhook subscriptions for this shop.
+      await shopify.registerWebhooks({ session });
       // Persist our own Shop record with the offline token encrypted at rest (§9.3).
       await prisma.shop.upsert({
         where: { shop: session.shop },
@@ -56,7 +70,9 @@ const shopify = shopifyApp({
         },
       });
 
-      // Phase 1 will register webhooks here (orders/*, compliance topics, etc.).
+      // Kick off a recent-order backfill in the worker (never inline, §5). Idempotent:
+      // coalesced per shop via a stable jobId.
+      await enqueueOrderBackfill({ shop: session.shop, limit: 100 });
 
       // Set our own signed session cookie and land on the dashboard (CLAUDE.md §2).
       const appSession = await getShopSession(new Request(process.env.SHOPIFY_APP_URL));

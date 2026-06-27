@@ -17,7 +17,4 @@ export function createWorkerRedis(): IORedis {
   });
 }
 
-/** Queue names shared between web (enqueue) and worker (consume). Grows per phase. */
-export const QUEUE = {
-  // Phase 1+: tracking poller, notifications, webhook processing, usage metering.
-} as const;
+// Queue names are shared via app/lib/queue-names.ts (imported by both web and worker).

@@ -21,5 +21,11 @@ redirect_urls = [
 [webhooks]
 api_version = "2025-01"
 
+  # Mandatory GDPR/compliance webhooks (CLAUDE.md §9.5). HMAC-verified at /webhooks.
+  [webhooks.privacy_compliance]
+  customer_data_request_url = "https://app.yourdomain.com/webhooks"
+  customer_deletion_url = "https://app.yourdomain.com/webhooks"
+  shop_deletion_url = "https://app.yourdomain.com/webhooks"
+
 [pos]
 embedded = false

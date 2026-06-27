@@ -1,7 +1,7 @@
-// Phase 0 — only the Shop + Session models exist (CLAUDE.md §13, BUILD-PHASES Phase 0).
-// The full data model (Order, Shipment, TrackingEvent, Return, NotificationLog,
-// UsageRecord, Subscription, WebhookLog, AutomationRule, CourierAccount) lands in
-// Phase 1 — do NOT add it here yet.
+// Full data model (CLAUDE.md §8). Canonical shipment status set is §6. Money is always
+// stored in integer MINOR units with an accompanying currency code (§11). Courier
+// credentials and offline tokens are stored ENCRYPTED (AES-256-GCM, §9.3) — the schema
+// keeps them as opaque strings; encryption happens in app code, never in the DB.
 
 generator client {
   provider = "prisma-client-js"
@@ -13,8 +13,25 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ── Canonical shipment status (CLAUDE.md §6) ────────────────────────────────
+// Every carrier adapter maps its raw status into exactly one of these. The UI only
+// ever reads this canonical value; the raw courier string is stored alongside.
+enum ShipmentStatus {
+  READY_TO_SHIP
+  SHIPPED
+  IN_TRANSIT
+  OUT_FOR_DELIVERY
+  DELIVERED
+  NDR
+  RTO_INITIATED
+  RTO_DELIVERED
+  CANCELLED
+  RETURN_INITIATED
+  RETURN_RECEIVED
+}
+
+// ── Session storage (backs non-embedded OAuth, §2) ──────────────────────────
 // Required shape for @shopify/shopify-app-session-storage-prisma.
-// This backs the cookie-session OAuth flow (non-embedded, CLAUDE.md §2).
 model Session {
   id            String    @id
   shop          String
@@ -35,16 +52,228 @@ model Session {
   @@index([shop])
 }
 
-// Our own per-shop record (CLAUDE.md §8). The offline access token is stored here
-// ENCRYPTED (AES-256-GCM) — separate from the raw token the session storage keeps.
+// ── Shop (our own per-merchant record) ──────────────────────────────────────
 model Shop {
   id            String    @id @default(cuid())
-  shop          String    @unique
-  accessToken   String? // encrypted offline access token (AES-256-GCM)
+  shop          String    @unique // myshopify domain
+  accessToken   String? // ENCRYPTED offline access token (AES-256-GCM, §9.3)
   scope         String?
   plan          String?
   installState  String    @default("installed") // "installed" | "uninstalled"
   installedAt   DateTime  @default(now())
   uninstalledAt DateTime?
   updatedAt     DateTime  @updatedAt
+
+  orders          Order[]
+  shipments       Shipment[]
+  courierAccounts CourierAccount[]
+  returns         Return[]
+  notifications   NotificationLog[]
+  usageRecords    UsageRecord[]
+  subscriptions   Subscription[]
+  automationRules AutomationRule[]
+  webhookLogs     WebhookLog[]
+}
+
+// ── CourierAccount (per-merchant courier connection) ────────────────────────
+model CourierAccount {
+  id          String   @id @default(cuid())
+  shopId      String
+  shop        Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  courierKey  String // 'delhivery' | 'shiprocket' | ...
+  credentials String // ENCRYPTED JSON blob (AES-256-GCM, §9.3) — never logged
+  testMode    Boolean  @default(true)
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([shopId, courierKey])
+  @@index([shopId])
+}
+
+// ── Order (mirror of relevant Shopify fields + sync status) ─────────────────
+model Order {
+  id                String    @id @default(cuid())
+  shopId            String
+  shop              Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shopifyId         String // Shopify Order GID, e.g. gid://shopify/Order/123
+  name              String // order display number, e.g. "#1001"
+  email             String?
+  customerName      String?
+  phone             String?
+  financialStatus   String? // Shopify financial status (paid, pending, refunded, ...)
+  fulfillmentStatus String? // Shopify fulfillment status (unfulfilled, fulfilled, ...)
+  totalPrice        Int       @default(0) // minor units
+  currency          String    @default("INR")
+  lineItemsCount    Int       @default(0)
+  shippingName      String?
+  shippingCity      String?
+  shippingProvince  String?
+  shippingZip       String?
+  shippingCountry   String?
+  tags              String? // comma-joined Shopify tags
+  shopifyCreatedAt  DateTime?
+  shopifyUpdatedAt  DateTime?
+  cancelledAt       DateTime?
+  syncStatus        String    @default("synced") // "synced" | "stale" | "error"
+  raw               Json? // trimmed raw payload for debugging
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  shipments Shipment[]
+  returns   Return[]
+
+  @@unique([shopId, shopifyId])
+  @@index([shopifyId]) // CLAUDE.md §8 required index
+  @@index([shopId, financialStatus])
+  @@index([shopId, fulfillmentStatus])
+  @@index([shopId, shopifyCreatedAt])
+}
+
+// ── Shipment (one AWB per order+courier) ────────────────────────────────────
+model Shipment {
+  id             String         @id @default(cuid())
+  shopId         String
+  shop           Shop           @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  orderId        String
+  order          Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  courierKey     String
+  awb            String         @unique // CLAUDE.md §8 required unique
+  idempotencyKey String         @unique // per (order+courier), §9.1 — required unique
+  status         ShipmentStatus @default(READY_TO_SHIP) // canonical (§6)
+  rawStatus      String? // raw courier status string (§6: store both)
+  labelRef       String? // storage ref / path to the generated label PDF
+  shippingCost   Int? // minor units
+  codAmount      Int? // minor units
+  currency       String         @default("INR")
+  weightGrams    Int?
+  shippedAt      DateTime?
+  deliveredAt    DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  trackingEvents TrackingEvent[]
+  usageRecords   UsageRecord[]
+
+  @@index([awb]) // CLAUDE.md §8 required index
+  @@index([idempotencyKey]) // CLAUDE.md §8 required index
+  @@index([shopId, status])
+  @@index([orderId])
+}
+
+// ── TrackingEvent (timeline entries from courier polling) ───────────────────
+model TrackingEvent {
+  id         String         @id @default(cuid())
+  shipmentId String
+  shipment   Shipment       @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  status     ShipmentStatus // canonical (§6)
+  rawStatus  String?
+  location   String?
+  message    String?
+  occurredAt DateTime
+  createdAt  DateTime       @default(now())
+
+  @@index([shipmentId, occurredAt])
+}
+
+// ── Return (self-serve + admin lifecycle, refined in Phase 4) ───────────────
+model Return {
+  id           String    @id @default(cuid())
+  shopId       String
+  shop         Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  orderId      String
+  order        Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  reason       String?
+  status       String    @default("REQUESTED") // state machine; Phase 4 enumerates fully
+  reverseAwb   String?
+  customerNote String?
+  commsRefs    Json? // references to NotificationLog rows sent for this return
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  resolvedAt   DateTime?
+
+  @@index([shopId, status])
+  @@index([orderId])
+}
+
+// ── NotificationLog (every email/SMS send routed through the provider, §9.6) ─
+model NotificationLog {
+  id            String   @id @default(cuid())
+  shopId        String
+  shop          Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  channel       String // "email" | "sms"
+  template      String // event/template key
+  recipient     String
+  status        String // "queued" | "sent" | "failed"
+  providerMsgId String?
+  error         String?
+  createdAt     DateTime @default(now())
+  sentAt        DateTime?
+
+  @@index([shopId, channel])
+  @@index([shopId, template])
+}
+
+// ── UsageRecord (billable shipment metering, §9.2) ──────────────────────────
+model UsageRecord {
+  id                  String   @id @default(cuid())
+  shopId              String
+  shop                Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shipmentId          String?
+  shipment            Shipment? @relation(fields: [shipmentId], references: [id], onDelete: SetNull)
+  billed              Boolean  @default(false)
+  shopifyUsageRecordId String?
+  amount              Int? // minor units (overage amount, if any)
+  currency            String   @default("USD")
+  createdAt           DateTime @default(now())
+
+  @@index([shopId, billed])
+  @@index([shipmentId])
+}
+
+// ── Subscription (Shopify Billing API plan, §10) ────────────────────────────
+model Subscription {
+  id                     String    @id @default(cuid())
+  shopId                 String
+  shop                   Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  plan                   String
+  shopifyAppSubscriptionId String?  @unique
+  status                 String // "active" | "cancelled" | "pending" | "frozen"
+  currentPeriodEnd       DateTime?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  @@index([shopId, status])
+}
+
+// ── WebhookLog (idempotency / dedupe, §9.4) ─────────────────────────────────
+model WebhookLog {
+  id          String   @id @default(cuid())
+  shopId      String?
+  shop        Shop?    @relation(fields: [shopId], references: [id], onDelete: SetNull)
+  shopDomain  String // raw shop domain from the webhook (shop row may not exist yet)
+  topic       String
+  payloadHash String
+  processedAt DateTime @default(now())
+
+  // Dedupe key (CLAUDE.md §8 index + §9.4 idempotency): a repeated delivery of the
+  // same (topic, payloadHash) is ignored.
+  @@unique([topic, payloadHash])
+  @@index([topic, payloadHash])
+}
+
+// ── AutomationRule (auto-fulfill / auto-ship / auto-assign, Phase 3+) ────────
+model AutomationRule {
+  id         String   @id @default(cuid())
+  shopId     String
+  shop       Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  trigger    String
+  conditions Json
+  action     Json
+  enabled    Boolean  @default(true)
+  priority   Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([shopId, enabled])
 }
