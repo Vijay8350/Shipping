@@ -49,7 +49,7 @@ export const NAVIGATION: NavSection[] = [
   {
     title: "Configuration",
     items: [
-      { label: "Logistics Config", url: "#", phase: 2 },
+      { label: "Logistics Config", url: "/logistics", phase: 2 },
       { label: "Notifications", url: "#", phase: 4 },
       { label: "Billing & Plans", url: "#", phase: 6 },
       { label: "Settings", url: "#", phase: 6 },

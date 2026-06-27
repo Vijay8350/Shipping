@@ -73,6 +73,28 @@ model Shop {
   subscriptions   Subscription[]
   automationRules AutomationRule[]
   webhookLogs     WebhookLog[]
+  pickupAddresses PickupAddress[]
+}
+
+// ── PickupAddress (shipment origin / warehouse, set in Logistics Config) ─────
+model PickupAddress {
+  id          String   @id @default(cuid())
+  shopId      String
+  shop        Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  label       String // e.g. "Main warehouse" — for couriers that key on a registered name
+  contactName String
+  phone       String
+  line1       String
+  line2       String?
+  city        String
+  state       String
+  pincode     String
+  country     String   @default("India")
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([shopId])
 }
 
 // ── CourierAccount (per-merchant courier connection) ────────────────────────
@@ -107,6 +129,8 @@ model Order {
   currency          String    @default("INR")
   lineItemsCount    Int       @default(0)
   shippingName      String?
+  shippingAddress1  String?
+  shippingAddress2  String?
   shippingCity      String?
   shippingProvince  String?
   shippingZip       String?

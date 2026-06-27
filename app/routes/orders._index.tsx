@@ -1,6 +1,6 @@
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { useLoaderData, useSearchParams } from "@remix-run/react";
+import { Link, useLoaderData, useSearchParams } from "@remix-run/react";
 import { useCallback } from "react";
 import {
   Badge,
@@ -120,9 +120,11 @@ export default function OrdersPage() {
   const rowMarkup = orders.map((order, index) => (
     <IndexTable.Row id={order.id} key={order.id} position={index}>
       <IndexTable.Cell>
-        <Text as="span" fontWeight="semibold">
-          {order.name}
-        </Text>
+        <Link to={`/orders/${order.id}`}>
+          <Text as="span" fontWeight="semibold">
+            {order.name}
+          </Text>
+        </Link>
       </IndexTable.Cell>
       <IndexTable.Cell>{order.createdAt}</IndexTable.Cell>
       <IndexTable.Cell>

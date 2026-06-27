@@ -8,10 +8,11 @@
 
 ## 0. Current repository state (read first)
 
-**Phases 0–1 are built.** The non-embedded Shopify Remix app plus the data model, webhook
-pipeline, order sync, and All Orders screen are in and verified offline (typecheck, build,
-13 unit tests pass). **Phases 2–6 are not built.** Work the next phase from
-`BUILD-PHASES.md`, one per session (§14). **Next up: Phase 2** (carrier adapters).
+**Phases 0–2 are built.** Foundation + data/sync + the carrier adapter framework
+(Delhivery & Shiprocket) are in and verified offline (typecheck, build, 26 unit tests
+pass). **Phases 3–6 are not built.** Work the next phase from `BUILD-PHASES.md`, one per
+session (§14). **Next up: Phase 3** (worker tracking poller, tracking UI, pickups,
+fulfill-back).
 
 What exists now (Phase 0 — foundation):
 - Non-embedded OAuth/SSO flow (§2): `app/routes/_index.tsx` (entry decision) →
@@ -38,9 +39,27 @@ What exists now (Phase 1 — data + sync):
   enqueued in `afterAuth` and consumed by `worker/processors/backfill.ts`.
 - **Queues**: names/types in `app/lib/queue-names.ts` (shared, pure); enqueue helpers in
   `app/lib/queues.server.ts`; consumers in `worker/processors/`.
-- **All Orders screen**: `app/routes/orders.tsx` (Polaris IndexTable, status tabs, search,
-  pagination, status badges via `app/lib/order-status.ts`). Nav link is live in
-  `app/lib/navigation.ts`.
+- **All Orders screen**: `app/routes/orders._index.tsx` (Polaris IndexTable, status tabs,
+  search, pagination, badges via `app/lib/order-status.ts`); rows link to order detail.
+
+What exists now (Phase 2 — carriers):
+- **Adapter contract** `app/lib/carriers/types.ts` (§7); **registry**
+  `app/lib/carriers/registry.ts` resolves by courierKey + holds UI credential-field specs.
+  App code never instantiates an adapter directly — always via the registry.
+- **Delhivery + Shiprocket** adapters under `app/lib/carriers/<key>/` (all 6 methods),
+  each with a `status.ts` normalizer (§6) and fixture tests using an injected `fetch`
+  (`test-helpers.ts`). Exact courier field mappings still need live-sandbox validation (§14).
+- **Encrypted creds + test mode**: `app/services/courier-accounts.server.ts` (decrypts
+  only in-memory to build an adapter); pickup origin in
+  `app/services/pickup-addresses.server.ts` + `PickupAddress` model.
+- **Idempotent ship workflow** `app/services/shipping.server.ts` (§9.1:
+  `idempotencyKey = orderId:courierKey`, returns existing shipment, unique-constraint
+  race guard) → writes `UsageRecord` (§9.2, `usage.server.ts`).
+- **In-app PDFs** `app/services/pdf.server.ts` (pdfkit): label + manifest. Routes:
+  `logistics.tsx` (Logistics Config), `orders.$id.tsx` (detail + ship panel),
+  `labels.$shipmentId.tsx` (label PDF), `manifest[.]pdf.tsx` (manifest PDF).
+- Order model gained `shippingAddress1/2` (needed to ship) — Phase 2 migration
+  `prisma/migrations/1_phase2_pickup_address/`.
 
 ### Commands
 ```bash
@@ -77,10 +96,10 @@ Files in the repo and how they relate:
 | `JSY Logistics Dashboard.html` | ~430 KB **bundled visual design prototype** of the merchant dashboard. Use it as the UI/layout reference when building Polaris screens; it is not runnable app code. |
 | `docs/shopify-logistics-app-spec.md` | **Referenced everywhere as the FEATURE source of truth (the 16 modules) but DOES NOT EXIST yet.** If a phase needs feature detail from it, stop and ask the user for the spec rather than inventing module behavior. |
 
-**Next up: Phase 2** (CarrierAdapter framework + registry, Delhivery + Shiprocket
-adapters, Logistics Config with encrypted creds + test mode, idempotent AWB + label/
-manifest PDFs, UsageRecord per shipment, adapter fixture tests). Do not start it until
-asked — one phase per session.
+**Next up: Phase 3** (worker tracking poller cron + status normalization, push
+fulfillment + tracking back to Shopify, Order Tracking screen, Pickup Requests, real
+order-row actions: track/cancel/reprint). Do not start it until asked — one phase per
+session.
 
 ---
 

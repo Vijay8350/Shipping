@@ -21,6 +21,8 @@ export interface OrderData {
   currency: string;
   lineItemsCount: number;
   shippingName: string | null;
+  shippingAddress1: string | null;
+  shippingAddress2: string | null;
   shippingCity: string | null;
   shippingProvince: string | null;
   shippingZip: string | null;
@@ -76,6 +78,8 @@ interface RestOrder {
   customer?: { first_name?: string | null; last_name?: string | null } | null;
   shipping_address?: {
     name?: string | null;
+    address1?: string | null;
+    address2?: string | null;
     city?: string | null;
     province?: string | null;
     zip?: string | null;
@@ -103,6 +107,8 @@ export function mapRestOrder(payload: RestOrder): OrderData {
       0,
     ),
     shippingName: ship?.name ?? null,
+    shippingAddress1: ship?.address1 ?? null,
+    shippingAddress2: ship?.address2 ?? null,
     shippingCity: ship?.city ?? null,
     shippingProvince: ship?.province ?? null,
     shippingZip: ship?.zip ?? null,
@@ -133,6 +139,8 @@ export interface GraphqlOrderNode {
   customer?: { firstName?: string | null; lastName?: string | null } | null;
   shippingAddress?: {
     name?: string | null;
+    address1?: string | null;
+    address2?: string | null;
     city?: string | null;
     province?: string | null;
     zip?: string | null;
@@ -155,6 +163,8 @@ export function mapGraphqlOrder(node: GraphqlOrderNode): OrderData {
     currency: money?.currencyCode ?? "INR",
     lineItemsCount: node.subtotalLineItemsQuantity ?? 0,
     shippingName: ship?.name ?? null,
+    shippingAddress1: ship?.address1 ?? null,
+    shippingAddress2: ship?.address2 ?? null,
     shippingCity: ship?.city ?? null,
     shippingProvince: ship?.province ?? null,
     shippingZip: ship?.zip ?? null,

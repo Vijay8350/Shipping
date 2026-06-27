@@ -39,6 +39,8 @@ export async function upsertOrder(shopDomain: string, data: OrderData) {
     currency: data.currency,
     lineItemsCount: data.lineItemsCount,
     shippingName: data.shippingName,
+    shippingAddress1: data.shippingAddress1,
+    shippingAddress2: data.shippingAddress2,
     shippingCity: data.shippingCity,
     shippingProvince: data.shippingProvince,
     shippingZip: data.shippingZip,
@@ -75,7 +77,7 @@ const BACKFILL_QUERY = /* GraphQL */ `
           currentTotalPriceSet { shopMoney { amount currencyCode } }
           subtotalLineItemsQuantity
           customer { firstName lastName }
-          shippingAddress { name city province zip country }
+          shippingAddress { name address1 address2 city province zip country }
         }
       }
       pageInfo { hasNextPage endCursor }
