@@ -1,0 +1,50 @@
+// Phase 0 — only the Shop + Session models exist (CLAUDE.md §13, BUILD-PHASES Phase 0).
+// The full data model (Order, Shipment, TrackingEvent, Return, NotificationLog,
+// UsageRecord, Subscription, WebhookLog, AutomationRule, CourierAccount) lands in
+// Phase 1 — do NOT add it here yet.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  // Postgres on AWS RDS. NEVER SQLite, in any environment (CLAUDE.md §3).
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Required shape for @shopify/shopify-app-session-storage-prisma.
+// This backs the cookie-session OAuth flow (non-embedded, CLAUDE.md §2).
+model Session {
+  id            String    @id
+  shop          String
+  state         String
+  isOnline      Boolean   @default(false)
+  scope         String?
+  expires       DateTime?
+  accessToken   String
+  userId        BigInt?
+  firstName     String?
+  lastName      String?
+  email         String?
+  accountOwner  Boolean   @default(false)
+  locale        String?
+  collaborator  Boolean?  @default(false)
+  emailVerified Boolean?  @default(false)
+
+  @@index([shop])
+}
+
+// Our own per-shop record (CLAUDE.md §8). The offline access token is stored here
+// ENCRYPTED (AES-256-GCM) — separate from the raw token the session storage keeps.
+model Shop {
+  id            String    @id @default(cuid())
+  shop          String    @unique
+  accessToken   String? // encrypted offline access token (AES-256-GCM)
+  scope         String?
+  plan          String?
+  installState  String    @default("installed") // "installed" | "uninstalled"
+  installedAt   DateTime  @default(now())
+  uninstalledAt DateTime?
+  updatedAt     DateTime  @updatedAt
+}

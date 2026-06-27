@@ -1,0 +1,25 @@
+# Shopify app config (CLAUDE.md §2, §10). This app is NON-EMBEDDED.
+# Replace client_id and the URLs with your real values, or manage via `shopify app config`.
+
+name = "shipping-management"
+client_id = "REPLACE_WITH_SHOPIFY_API_KEY"
+application_url = "https://app.yourdomain.com"
+
+# THE key fact: non-embedded. No App Bridge, no admin iframe (CLAUDE.md §2).
+embedded = false
+
+[access_scopes]
+# Least-privilege start set (CLAUDE.md §10). Refine per feature in later phases.
+scopes = "read_orders,write_orders,read_fulfillments,write_fulfillments,read_products,write_merchant_managed_fulfillment_orders"
+
+[auth]
+redirect_urls = [
+  "https://app.yourdomain.com/auth/callback",
+  "https://app.yourdomain.com/auth/login"
+]
+
+[webhooks]
+api_version = "2025-01"
+
+[pos]
+embedded = false

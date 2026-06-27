@@ -8,11 +8,46 @@
 
 ## 0. Current repository state (read first)
 
-**Nothing is built yet.** As of this writing the repo contains only planning docs and
-a design prototype — there is **no application code, no `package.json`, no Prisma
-schema, no tests, and therefore no build/lint/test commands.** Phase 0 of
-`BUILD-PHASES.md` (scaffold the Shopify Remix app) has not been run. Do not assume any
-file in §8/§11 exists — you will be creating it.
+**Phase 0 (Foundation) is built.** The non-embedded Shopify Remix app is scaffolded and
+verified: it typechecks, builds, and the crypto unit test passes. **Phases 1–6 are not
+built** — the Prisma schema is intentionally only `Shop` + `Session` (see §8 for the
+full model that Phase 1 adds). Work the next phase from `BUILD-PHASES.md`, one per
+session (§14).
+
+What exists now (built in Phase 0):
+- Non-embedded OAuth/SSO flow (§2): `app/routes/_index.tsx` (entry decision) →
+  `auth.$.tsx` (OAuth) → `afterAuth` in `app/shopify.server.ts` sets our own signed
+  cookie → `/dashboard`. Login state cookie lives in `app/session.server.ts`.
+- `app/shopify.server.ts` — `shopifyApp({ isEmbeddedApp: false, useOnlineTokens: false })`
+  with `PrismaSessionStorage`. `apiVersion` is omitted (library default = current stable).
+- Prisma + Postgres, models `Shop` + `Session` only (`prisma/schema.prisma`).
+- `app/lib/crypto.server.ts` — AES-256-GCM helpers (§9.3) + `crypto.server.test.ts`.
+- `app/redis.server.ts` (enqueue side) + `worker/` (BullMQ bootstrap, no jobs yet).
+- Polaris shell `app/components/AppShell.tsx` driven by `app/lib/navigation.ts`.
+- `ecosystem.config.cjs` (PM2 `web` + `worker`), `.env.example`, `README.md`.
+
+### Commands
+```bash
+npm install                          # deps
+npm run dev                          # Remix web server (http://localhost:3000)
+npm run worker:dev                   # BullMQ worker (prints "worker up" once Redis connects)
+npm run build                        # production build (Remix/Vite)
+npm start                            # serve the production build
+npm run typecheck                    # tsc --noEmit
+npm test                             # vitest run (all tests)
+npx vitest run app/lib/crypto.server.test.ts   # a single test file
+npx vitest -t "round-trips a secret"           # a single test by name (watch)
+npx prisma migrate dev --name <name> # create/apply a migration (needs a live Postgres)
+npx prisma generate                  # regenerate the Prisma client after schema edits
+npm run setup                        # prisma generate && prisma migrate deploy (prod)
+pm2 start ecosystem.config.cjs       # run web + worker under PM2
+```
+
+> ⚠️ **What local verification CANNOT cover without infra/credentials:** end-to-end
+> OAuth (needs a Shopify Partner app + dev store + public HTTPS tunnel as
+> `SHOPIFY_APP_URL`), Prisma migrate/runtime (needs a reachable Postgres — never
+> SQLite, §3), and the worker actually connecting (needs Redis). `npm test`,
+> `npm run typecheck`, and `npm run build` are the checks that run offline.
 
 Files in the repo and how they relate:
 
@@ -22,11 +57,13 @@ Files in the repo and how they relate:
 | `BUILD-PHASES.md` | The 7 phase prompts (Phase 0–6). **Run exactly one phase per session**, in order; tick its Acceptance Criteria before moving on. Re-read this file (and §13 here) to know what comes next. |
 | `FULL-APP-MASTER-PROMPT.md` | Self-contained kickoff brief — a restatement of this file + the phase list. Reference, not a second source of truth. |
 | `AGENTS.md` | Short orientation for AI agents; points back here. |
+| `README.md` | Local dev + EC2 deploy instructions (generated in Phase 0). |
 | `JSY Logistics Dashboard.html` | ~430 KB **bundled visual design prototype** of the merchant dashboard. Use it as the UI/layout reference when building Polaris screens; it is not runnable app code. |
 | `docs/shopify-logistics-app-spec.md` | **Referenced everywhere as the FEATURE source of truth (the 16 modules) but DOES NOT EXIST yet.** If a phase needs feature detail from it, stop and ask the user for the spec rather than inventing module behavior. |
 
-When you start implementing, begin with `BUILD-PHASES.md` Phase 0. Once the app is
-scaffolded, update this §0 with the real run/build/test commands.
+**Next up: Phase 1** (full Prisma schema + indexes, webhooks incl. the 3 compliance
+topics, order backfill + sync, All Orders screen). Do not start it until asked — one
+phase per session.
 
 ---
 
