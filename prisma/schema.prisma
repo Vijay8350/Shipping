@@ -74,6 +74,7 @@ model Shop {
   automationRules AutomationRule[]
   webhookLogs     WebhookLog[]
   pickupAddresses PickupAddress[]
+  pickupRequests  PickupRequest[]
 }
 
 // ── PickupAddress (shipment origin / warehouse, set in Logistics Config) ─────
@@ -95,6 +96,23 @@ model PickupAddress {
   updatedAt   DateTime @updatedAt
 
   @@index([shopId])
+}
+
+// ── PickupRequest (courier pickup scheduling, Phase 3) ──────────────────────
+model PickupRequest {
+  id               String    @id @default(cuid())
+  shopId           String
+  shop             Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  courierKey       String
+  externalPickupId String?
+  status           String    @default("requested") // requested | scheduled | completed | failed
+  scheduledFor     DateTime?
+  packageCount     Int       @default(1)
+  raw              Json?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([shopId, status])
 }
 
 // ── CourierAccount (per-merchant courier connection) ────────────────────────
@@ -163,10 +181,13 @@ model Shipment {
   order          Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
   courierKey     String
   awb            String         @unique // CLAUDE.md §8 required unique
+  externalShipmentId String? // courier-side shipment/order id (label/pickup/cancel)
   idempotencyKey String         @unique // per (order+courier), §9.1 — required unique
   status         ShipmentStatus @default(READY_TO_SHIP) // canonical (§6)
   rawStatus      String? // raw courier status string (§6: store both)
   labelRef       String? // storage ref / path to the generated label PDF
+  shopifyFulfillmentId String? // set once we push a Fulfillment back to Shopify (Phase 3)
+  lastTrackedAt  DateTime? // last successful courier poll (Phase 3)
   shippingCost   Int? // minor units
   codAmount      Int? // minor units
   currency       String         @default("INR")

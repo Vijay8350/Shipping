@@ -8,11 +8,11 @@
 
 ## 0. Current repository state (read first)
 
-**Phases 0–2 are built.** Foundation + data/sync + the carrier adapter framework
-(Delhivery & Shiprocket) are in and verified offline (typecheck, build, 26 unit tests
-pass). **Phases 3–6 are not built.** Work the next phase from `BUILD-PHASES.md`, one per
-session (§14). **Next up: Phase 3** (worker tracking poller, tracking UI, pickups,
-fulfill-back).
+**Phases 0–3 are built.** Foundation + data/sync + carrier adapters + the worker tracking
+poller / tracking UI / pickups / fulfillment push-back are in and verified offline
+(typecheck, build, 30 unit tests pass). **Phases 4–6 are not built.** Work the next phase
+from `BUILD-PHASES.md`, one per session (§14). **Next up: Phase 4** (NDR/RTO, returns
+lifecycle, notifications stub + templates).
 
 What exists now (Phase 0 — foundation):
 - Non-embedded OAuth/SSO flow (§2): `app/routes/_index.tsx` (entry decision) →
@@ -61,6 +61,24 @@ What exists now (Phase 2 — carriers):
 - Order model gained `shippingAddress1/2` (needed to ship) — Phase 2 migration
   `prisma/migrations/1_phase2_pickup_address/`.
 
+What exists now (Phase 3 — tracking/pickups/fulfill-back):
+- **Tracking poller** (§5): worker repeatable `TRACKING_POLLER` (every
+  `TRACKING_INTERVAL_MS`, default 15m, `upsertJobScheduler`) fans out one
+  `TRACKING_SHIPMENT` job per active shipment → `applyTrackingResult` writes
+  TrackingEvents + advances canonical status (`app/services/tracking.server.ts`, pure
+  helpers tested). On-demand "Track now" enqueues the same job.
+- **Fulfillment push-back** (§10): `app/services/fulfillment.server.ts` creates a Shopify
+  Fulfillment (`fulfillmentCreateV2`) with tracking number+URL when a shipment is moving;
+  idempotent via `Shipment.shopifyFulfillmentId`. Enqueued from the track processor.
+- **Order Tracking screen** `app/routes/tracking.tsx` (timeline + filters by
+  status/courier/date). **Pickup Requests** `app/routes/pickups.tsx` +
+  `app/services/pickups.server.ts` + `PickupRequest` model.
+- **Real shipment actions** on `orders.$id.tsx`: Track now, Cancel shipment
+  (`cancelShipment`), Reprint label.
+- Schema: `Shipment.externalShipmentId` (courier id for label/pickup/cancel),
+  `shopifyFulfillmentId`, `lastTrackedAt`; `PickupRequest`. Phase 3 migration
+  `prisma/migrations/2_phase3_tracking_pickups/`.
+
 ### Commands
 ```bash
 npm install                          # deps
@@ -96,10 +114,9 @@ Files in the repo and how they relate:
 | `JSY Logistics Dashboard.html` | ~430 KB **bundled visual design prototype** of the merchant dashboard. Use it as the UI/layout reference when building Polaris screens; it is not runnable app code. |
 | `docs/shopify-logistics-app-spec.md` | **Referenced everywhere as the FEATURE source of truth (the 16 modules) but DOES NOT EXIST yet.** If a phase needs feature detail from it, stop and ask the user for the spec rather than inventing module behavior. |
 
-**Next up: Phase 3** (worker tracking poller cron + status normalization, push
-fulfillment + tracking back to Shopify, Order Tracking screen, Pickup Requests, real
-order-row actions: track/cancel/reprint). Do not start it until asked — one phase per
-session.
+**Next up: Phase 4** (NDR + RTO handling, Returns lifecycle state machine incl. reverse
+AWB, NotificationProvider interface + stub + dispatcher + NotificationLog, email/SMS
+template management). Do not start it until asked — one phase per session.
 
 ---
 

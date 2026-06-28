@@ -1,4 +1,4 @@
-import { Prisma, type Shipment } from "@prisma/client";
+import { Prisma, ShipmentStatus, type Shipment } from "@prisma/client";
 
 import prisma from "../db.server";
 import type { Address, ServiceabilityOption } from "../lib/carriers/types";
@@ -148,6 +148,7 @@ export async function shipOrder(
         orderId: order.id,
         courierKey: input.courierKey,
         awb: result.awb,
+        externalShipmentId: result.externalShipmentId,
         idempotencyKey,
         status: result.status,
         rawStatus: result.rawStatus,
@@ -170,4 +171,28 @@ export async function shipOrder(
     }
     throw err;
   }
+}
+
+/** Cancel a shipment via its adapter and mark it CANCELLED (Phase 3 row action). */
+export async function cancelShipment(
+  shopDomain: string,
+  shipmentId: string,
+): Promise<Shipment> {
+  const shipment = await prisma.shipment.findFirst({
+    where: { id: shipmentId, shop: { shop: shopDomain } },
+  });
+  if (!shipment) throw new Error("Shipment not found");
+
+  const adapter = await getAdapterForShop(shopDomain, shipment.courierKey);
+  const res = await adapter.cancel({
+    awb: shipment.awb,
+    externalShipmentId: shipment.externalShipmentId ?? undefined,
+  });
+  if (!res.cancelled) {
+    throw new Error("Courier did not confirm cancellation.");
+  }
+  return prisma.shipment.update({
+    where: { id: shipment.id },
+    data: { status: ShipmentStatus.CANCELLED, rawStatus: "Cancelled" },
+  });
 }

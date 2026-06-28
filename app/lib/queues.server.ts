@@ -3,7 +3,9 @@ import { Queue } from "bullmq";
 import redis from "../redis.server";
 import {
   QUEUES,
+  type FulfillmentSyncJob,
   type OrderBackfillJob,
+  type TrackShipmentJob,
   type WebhookJob,
 } from "./queue-names";
 
@@ -40,5 +42,20 @@ export function enqueueOrderBackfill(job: OrderBackfillJob) {
   return getQueue(QUEUES.ORDER_BACKFILL).add("backfill", job, {
     ...defaultJobOpts,
     jobId: `backfill:${job.shop}`,
+  });
+}
+
+export function enqueueTrackShipment(job: TrackShipmentJob) {
+  // Coalesce concurrent track requests for the same shipment.
+  return getQueue(QUEUES.TRACKING_SHIPMENT).add("track", job, {
+    ...defaultJobOpts,
+    jobId: `track:${job.shipmentId}`,
+  });
+}
+
+export function enqueueFulfillmentSync(job: FulfillmentSyncJob) {
+  return getQueue(QUEUES.FULFILLMENT_SYNC).add("fulfill", job, {
+    ...defaultJobOpts,
+    jobId: `fulfill:${job.shipmentId}`,
   });
 }

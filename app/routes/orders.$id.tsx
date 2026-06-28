@@ -22,9 +22,10 @@ import prisma from "../db.server";
 import { requireShop } from "../session.server";
 import { AppShell } from "../components/AppShell";
 import { formatMoney } from "../lib/order-status";
+import { enqueueTrackShipment } from "../lib/queues.server";
 import { listCourierAccounts } from "../services/courier-accounts.server";
 import { getDefaultPickupAddress } from "../services/pickup-addresses.server";
-import { shipOrder } from "../services/shipping.server";
+import { cancelShipment, shipOrder } from "../services/shipping.server";
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
   const shop = await requireShop(request);
@@ -75,22 +76,36 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 export async function action({ request, params }: ActionFunctionArgs) {
   const shop = await requireShop(request);
   const form = await request.formData();
-  const courierKey = String(form.get("courierKey"));
-  const weightGrams = Math.max(1, Number(form.get("weightGrams") || 500));
-  const cod = form.get("cod") === "on";
-  const codAmount = cod ? Number(form.get("codAmount") || 0) : undefined;
+  const intent = String(form.get("intent") || "ship");
 
   try {
+    if (intent === "track") {
+      await enqueueTrackShipment({ shipmentId: String(form.get("shipmentId")) });
+      return json({ ok: true, idempotent: false, message: "Tracking refresh queued.", error: null });
+    }
+    if (intent === "cancel") {
+      await cancelShipment(shop, String(form.get("shipmentId")));
+      return json({ ok: true, idempotent: false, message: "Shipment cancelled.", error: null });
+    }
+
+    const cod = form.get("cod") === "on";
     const { idempotent } = await shipOrder(shop, {
       orderId: String(params.id),
-      courierKey,
-      weightGrams,
+      courierKey: String(form.get("courierKey")),
+      weightGrams: Math.max(1, Number(form.get("weightGrams") || 500)),
       cod,
-      codAmount,
+      codAmount: cod ? Number(form.get("codAmount") || 0) : undefined,
     });
-    return json({ ok: true, idempotent, error: null });
+    return json({
+      ok: true,
+      idempotent,
+      message: idempotent
+        ? "This order was already shipped — showing the existing AWB."
+        : "Shipment created.",
+      error: null,
+    });
   } catch (err) {
-    return json({ ok: false, idempotent: false, error: (err as Error).message });
+    return json({ ok: false, idempotent: false, message: null, error: (err as Error).message });
   }
 }
 
@@ -124,11 +139,7 @@ export default function OrderDetail() {
             ) : null}
             {actionData?.ok ? (
               <div style={{ marginBottom: 16 }}>
-                <Banner tone="success">
-                  {actionData.idempotent
-                    ? "This order was already shipped — showing the existing AWB."
-                    : "Shipment created."}
-                </Banner>
+                <Banner tone="success">{actionData.message}</Banner>
               </div>
             ) : null}
 
@@ -172,9 +183,27 @@ export default function OrderDetail() {
                           <Text as="span" variant="bodySm">
                             AWB: {s.awb}
                           </Text>
-                          <Link to={`/labels/${s.id}`} reloadDocument>
-                            Download label (PDF)
-                          </Link>
+                          <InlineStack gap="200" blockAlign="center">
+                            <Link to={`/labels/${s.id}`} reloadDocument>
+                              Reprint label (PDF)
+                            </Link>
+                          </InlineStack>
+                          <InlineStack gap="200">
+                            <Form method="post">
+                              <input type="hidden" name="intent" value="track" />
+                              <input type="hidden" name="shipmentId" value={s.id} />
+                              <Button submit variant="tertiary" loading={shipping}>
+                                Track now
+                              </Button>
+                            </Form>
+                            <Form method="post">
+                              <input type="hidden" name="intent" value="cancel" />
+                              <input type="hidden" name="shipmentId" value={s.id} />
+                              <Button submit variant="tertiary" tone="critical">
+                                Cancel shipment
+                              </Button>
+                            </Form>
+                          </InlineStack>
                         </BlockStack>
                       </Card>
                     ))}
@@ -190,6 +219,7 @@ export default function OrderDetail() {
                   </Banner>
                 ) : (
                   <Form method="post">
+                    <input type="hidden" name="intent" value="ship" />
                     <input type="hidden" name="courierKey" value={courierKey} />
                     <BlockStack gap="300">
                       <Select

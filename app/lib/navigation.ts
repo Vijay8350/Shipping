@@ -25,8 +25,8 @@ export const NAVIGATION: NavSection[] = [
     items: [
       { label: "All Orders", url: "/orders", phase: 1 },
       { label: "Shipping / AWB", url: "#", phase: 2 },
-      { label: "Order Tracking", url: "#", phase: 3 },
-      { label: "Pickup Requests", url: "#", phase: 3 },
+      { label: "Order Tracking", url: "/tracking", phase: 3 },
+      { label: "Pickup Requests", url: "/pickups", phase: 3 },
       { label: "Automation Rules", url: "#", phase: 3 },
     ],
   },
