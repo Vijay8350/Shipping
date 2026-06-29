@@ -8,11 +8,11 @@
 
 ## 0. Current repository state (read first)
 
-**Phases 0–3 are built.** Foundation + data/sync + carrier adapters + the worker tracking
-poller / tracking UI / pickups / fulfillment push-back are in and verified offline
-(typecheck, build, 30 unit tests pass). **Phases 4–6 are not built.** Work the next phase
-from `BUILD-PHASES.md`, one per session (§14). **Next up: Phase 4** (NDR/RTO, returns
-lifecycle, notifications stub + templates).
+**Phases 0–4 are built.** Foundation + data/sync + carrier adapters + tracking/fulfill-back
++ NDR/RTO/returns/notifications are in and verified offline (typecheck, build, 37 unit
+tests pass). **Phases 5–6 are not built.** Work the next phase from `BUILD-PHASES.md`, one
+per session (§14). **Next up: Phase 5** (storefront via App Proxy: branded tracking page,
+EDD, self-serve returns).
 
 What exists now (Phase 0 — foundation):
 - Non-embedded OAuth/SSO flow (§2): `app/routes/_index.tsx` (entry decision) →
@@ -79,6 +79,23 @@ What exists now (Phase 3 — tracking/pickups/fulfill-back):
   `shopifyFulfillmentId`, `lastTrackedAt`; `PickupRequest`. Phase 3 migration
   `prisma/migrations/2_phase3_tracking_pickups/`.
 
+What exists now (Phase 4 — NDR/RTO/returns/notifications):
+- **Notifications** (§9.6): provider interface `app/lib/notifications/types.ts` + console
+  stub (`provider.ts` picks the active one — swap MSG91/SES here later). Default templates
+  + `{{var}}` render in `templates.ts` (tested). DB overrides via `NotificationTemplate`.
+  Dispatcher `app/services/notifications.server.ts` routes every send through the provider,
+  writes `NotificationLog`, GATED by `template.enabled`. Queue `NOTIFICATIONS` +
+  `worker/processors/notifications.ts`. Tracking status changes fire events from the track
+  processor.
+- **Returns lifecycle**: pure state machine `app/lib/returns-state.ts` (tested);
+  `app/services/returns.server.ts` create→accept (reverse-pickup AWB via adapter, swapped
+  addresses)→IN_TRANSIT→received / decline. Admin screen `app/routes/returns.tsx`.
+- **NDR/RTO**: detected by the poller's status normalization; worklists +
+  `recordNdrAction` in `app/services/worklists.server.ts`. Screens `ndr.tsx`, `rto.tsx`.
+- **Notification templates screen** `app/routes/notifications.tsx`; dashboard shows live
+  NDR/RTO/returns counts. Schema: `NotificationTemplate` + `Return.reverse*` fields,
+  Phase 4 migration `prisma/migrations/3_phase4_returns_notifications/`.
+
 ### Commands
 ```bash
 npm install                          # deps
@@ -114,9 +131,9 @@ Files in the repo and how they relate:
 | `JSY Logistics Dashboard.html` | ~430 KB **bundled visual design prototype** of the merchant dashboard. Use it as the UI/layout reference when building Polaris screens; it is not runnable app code. |
 | `docs/shopify-logistics-app-spec.md` | **Referenced everywhere as the FEATURE source of truth (the 16 modules) but DOES NOT EXIST yet.** If a phase needs feature detail from it, stop and ask the user for the spec rather than inventing module behavior. |
 
-**Next up: Phase 4** (NDR + RTO handling, Returns lifecycle state machine incl. reverse
-AWB, NotificationProvider interface + stub + dispatcher + NotificationLog, email/SMS
-template management). Do not start it until asked — one phase per session.
+**Next up: Phase 5** (storefront via App Proxy: branded tracking page, EDD display,
+self-serve returns page + Customer Experience settings). Do not start it until asked —
+one phase per session.
 
 ---
 

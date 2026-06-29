@@ -5,6 +5,7 @@ import { QUEUES } from "../app/lib/queue-names";
 import { createWorkerRedis } from "./connection";
 import { processBackfill } from "./processors/backfill";
 import { processFulfillmentSync } from "./processors/fulfillment";
+import { processNotification } from "./processors/notifications";
 import { processTrackPoll, processTrackShipment } from "./processors/tracking";
 import { processWebhook } from "./processors/webhooks";
 
@@ -29,6 +30,7 @@ async function main() {
     // Modest concurrency keeps within courier rate limits; jobs back off on failure.
     new Worker(QUEUES.TRACKING_SHIPMENT, processTrackShipment, { connection, concurrency: 4 }),
     new Worker(QUEUES.FULFILLMENT_SYNC, processFulfillmentSync, { connection, concurrency: 3 }),
+    new Worker(QUEUES.NOTIFICATIONS, processNotification, { connection, concurrency: 5 }),
   ];
 
   // Schedule the repeatable tracking poll (idempotent by scheduler id).

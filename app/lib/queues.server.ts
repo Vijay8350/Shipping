@@ -4,6 +4,7 @@ import redis from "../redis.server";
 import {
   QUEUES,
   type FulfillmentSyncJob,
+  type NotificationJob,
   type OrderBackfillJob,
   type TrackShipmentJob,
   type WebhookJob,
@@ -58,4 +59,8 @@ export function enqueueFulfillmentSync(job: FulfillmentSyncJob) {
     ...defaultJobOpts,
     jobId: `fulfill:${job.shipmentId}`,
   });
+}
+
+export function enqueueNotification(job: NotificationJob) {
+  return getQueue(QUEUES.NOTIFICATIONS).add(job.event, job, defaultJobOpts);
 }

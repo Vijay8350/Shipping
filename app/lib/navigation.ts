@@ -33,9 +33,9 @@ export const NAVIGATION: NavSection[] = [
   {
     title: "Post-purchase",
     items: [
-      { label: "NDR", url: "#", phase: 4 },
-      { label: "RTO", url: "#", phase: 4 },
-      { label: "Returns", url: "#", phase: 4 },
+      { label: "NDR", url: "/ndr", phase: 4 },
+      { label: "RTO", url: "/rto", phase: 4 },
+      { label: "Returns", url: "/returns", phase: 4 },
     ],
   },
   {
@@ -50,7 +50,7 @@ export const NAVIGATION: NavSection[] = [
     title: "Configuration",
     items: [
       { label: "Logistics Config", url: "/logistics", phase: 2 },
-      { label: "Notifications", url: "#", phase: 4 },
+      { label: "Notifications", url: "/notifications", phase: 4 },
       { label: "Billing & Plans", url: "#", phase: 6 },
       { label: "Settings", url: "#", phase: 6 },
     ],

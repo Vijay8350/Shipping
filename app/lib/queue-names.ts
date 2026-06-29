@@ -14,6 +14,8 @@ export const QUEUES = {
   TRACKING_SHIPMENT: "tracking-shipment",
   /** Push a Fulfillment + tracking number/URL back to Shopify (Phase 3). */
   FULFILLMENT_SYNC: "fulfillment-sync",
+  /** Notification dispatcher — email/SMS via the provider interface (Phase 4, §9.6). */
+  NOTIFICATIONS: "notifications",
 } as const;
 
 export type QueueName = (typeof QUEUES)[keyof typeof QUEUES];
@@ -37,4 +39,12 @@ export interface TrackShipmentJob {
 
 export interface FulfillmentSyncJob {
   shipmentId: string;
+}
+
+export interface NotificationJob {
+  shopId: string;
+  event: string; // NotificationEvent
+  recipientEmail?: string | null;
+  recipientPhone?: string | null;
+  variables: Record<string, string | undefined>;
 }

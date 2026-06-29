@@ -69,6 +69,7 @@ model Shop {
   courierAccounts CourierAccount[]
   returns         Return[]
   notifications   NotificationLog[]
+  notificationTemplates NotificationTemplate[]
   usageRecords    UsageRecord[]
   subscriptions   Subscription[]
   automationRules AutomationRule[]
@@ -229,8 +230,11 @@ model Return {
   orderId      String
   order        Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
   reason       String?
-  status       String    @default("REQUESTED") // state machine; Phase 4 enumerates fully
+  status       String    @default("PENDING") // state machine (app/lib/returns-state.ts)
   reverseAwb   String?
+  reverseCourierKey        String?
+  reverseExternalShipmentId String?
+  reverseRawStatus         String?
   customerNote String?
   commsRefs    Json? // references to NotificationLog rows sent for this return
   createdAt    DateTime  @default(now())
@@ -257,6 +261,23 @@ model NotificationLog {
 
   @@index([shopId, channel])
   @@index([shopId, template])
+}
+
+// ── NotificationTemplate (editable per event×channel; gates firing, §9.6) ────
+model NotificationTemplate {
+  id        String   @id @default(cuid())
+  shopId    String
+  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  event     String // ORDER_SHIPPED | OUT_FOR_DELIVERY | DELIVERED | NDR | RTO_INITIATED | RETURN_ACCEPTED | RETURN_RECEIVED
+  channel   String // "email" | "sms"
+  subject   String? // email only
+  body      String
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([shopId, event, channel])
+  @@index([shopId])
 }
 
 // ── UsageRecord (billable shipment metering, §9.2) ──────────────────────────
