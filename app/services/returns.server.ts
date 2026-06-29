@@ -49,6 +49,36 @@ export async function createReturn(
   });
 }
 
+/**
+ * Customer self-service return (CLAUDE.md §10, Phase 5). Matches the order by name +
+ * email, then opens a PENDING return that lands in the admin Return Requests list.
+ */
+export async function createStorefrontReturn(
+  shopDomain: string,
+  input: { orderName: string; email: string; reason?: string; note?: string },
+) {
+  const shopId = await getShopId(shopDomain);
+  const name = input.orderName.trim();
+  const order = await prisma.order.findFirst({
+    where: {
+      shopId,
+      email: { equals: input.email.trim(), mode: "insensitive" },
+      name: { in: [name, name.startsWith("#") ? name.slice(1) : `#${name}`] },
+    },
+  });
+  if (!order) throw new Error("We couldn't find an order with that number and email.");
+
+  return prisma.return.create({
+    data: {
+      shopId,
+      orderId: order.id,
+      reason: input.reason,
+      customerNote: input.note,
+      status: "PENDING",
+    },
+  });
+}
+
 export async function declineReturn(shopDomain: string, returnId: string) {
   const shopId = await getShopId(shopDomain);
   const ret = await prisma.return.findFirst({ where: { id: returnId, shopId } });

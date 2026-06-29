@@ -8,11 +8,11 @@
 
 ## 0. Current repository state (read first)
 
-**Phases 0–4 are built.** Foundation + data/sync + carrier adapters + tracking/fulfill-back
-+ NDR/RTO/returns/notifications are in and verified offline (typecheck, build, 37 unit
-tests pass). **Phases 5–6 are not built.** Work the next phase from `BUILD-PHASES.md`, one
-per session (§14). **Next up: Phase 5** (storefront via App Proxy: branded tracking page,
-EDD, self-serve returns).
+**Phases 0–5 are built.** Foundation + data/sync + carrier adapters + tracking/fulfill-back
++ NDR/RTO/returns/notifications + the App Proxy storefront (tracking page, EDD, self-serve
+returns) are in and verified offline (typecheck, build, 41 unit tests pass). **Phase 6 is
+not built.** Work it from `BUILD-PHASES.md` (§14). **Next up: Phase 6** (Billing + usage
+metering + remaining 5 couriers + analytics + App Store compliance pass).
 
 What exists now (Phase 0 — foundation):
 - Non-embedded OAuth/SSO flow (§2): `app/routes/_index.tsx` (entry decision) →
@@ -96,6 +96,20 @@ What exists now (Phase 4 — NDR/RTO/returns/notifications):
   NDR/RTO/returns counts. Schema: `NotificationTemplate` + `Return.reverse*` fields,
   Phase 4 migration `prisma/migrations/3_phase4_returns_notifications/`.
 
+What exists now (Phase 5 — App Proxy storefront):
+- **App Proxy** (§10): config in `shopify.app.toml` `[app_proxy]` (subpath `ils` ->
+  `/proxy`). Public routes verify the proxy signature via
+  `authenticate.public.appProxy`: `proxy.track.tsx` (branded tracking page, app-shipped
+  only), `proxy.edd.tsx` (EDD JSON), `proxy.returns.tsx` (self-serve returns ->
+  `createStorefrontReturn` -> PENDING in admin). Storefront-safe HTML via
+  `app/lib/storefront-html.ts` (no Polaris).
+- **EDD** `app/services/edd.server.ts` + pure date math `app/lib/edd.ts` (tested): courier
+  serviceability ETA, falling back to the configured transit window.
+- **Settings**: `StorefrontSettings` model + `app/services/storefront-settings.server.ts`
+  (defaults when unset); admin screen `app/routes/customer-experience.tsx` (branding,
+  per-surface toggles, transit window). Phase 5 migration
+  `prisma/migrations/4_phase5_storefront/`.
+
 ### Commands
 ```bash
 npm install                          # deps
@@ -131,9 +145,10 @@ Files in the repo and how they relate:
 | `JSY Logistics Dashboard.html` | ~430 KB **bundled visual design prototype** of the merchant dashboard. Use it as the UI/layout reference when building Polaris screens; it is not runnable app code. |
 | `docs/shopify-logistics-app-spec.md` | **Referenced everywhere as the FEATURE source of truth (the 16 modules) but DOES NOT EXIST yet.** If a phase needs feature detail from it, stop and ask the user for the spec rather than inventing module behavior. |
 
-**Next up: Phase 5** (storefront via App Proxy: branded tracking page, EDD display,
-self-serve returns page + Customer Experience settings). Do not start it until asked —
-one phase per session.
+**Next up: Phase 6** (Shopify Billing USD plans + plan gating, usage/overage emission
+with cap + no double-billing, remaining 5 adapters: Bluedart/DTDC/Amazon Shipping/Shree
+Maruti/Trackon, analytics dashboard, App Store compliance pass). Do not start it until
+asked — one phase per session.
 
 ---
 

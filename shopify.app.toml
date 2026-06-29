@@ -27,5 +27,12 @@ api_version = "2025-01"
   customer_deletion_url = "https://app.yourdomain.com/webhooks"
   shop_deletion_url = "https://app.yourdomain.com/webhooks"
 
+# App Proxy (CLAUDE.md §10): storefront pages served from OUR domain through the proxy.
+# Storefront URL https://<shop>/apps/ils/<path>  ->  https://app.yourdomain.com/proxy/<path>
+[app_proxy]
+url = "https://app.yourdomain.com/proxy"
+subpath = "ils"
+prefix = "apps"
+
 [pos]
 embedded = false

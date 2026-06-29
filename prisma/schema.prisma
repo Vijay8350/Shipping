@@ -76,6 +76,26 @@ model Shop {
   webhookLogs     WebhookLog[]
   pickupAddresses PickupAddress[]
   pickupRequests  PickupRequest[]
+  storefront      StorefrontSettings?
+}
+
+// ── StorefrontSettings (Customer Experience: tracking page / EDD / returns, §10) ──
+model StorefrontSettings {
+  id              String   @id @default(cuid())
+  shopId          String   @unique
+  shop            Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  logoUrl         String?
+  themeColor      String   @default("#1a73e8")
+  customCss       String?
+  dateFormat      String   @default("DD MMM YYYY")
+  trackingEnabled Boolean  @default(true)
+  eddEnabled      Boolean  @default(true)
+  returnsEnabled  Boolean  @default(true)
+  eddMinDays      Int      @default(2)
+  eddMaxDays      Int      @default(7)
+  supportEmail    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 // ── PickupAddress (shipment origin / warehouse, set in Logistics Config) ─────

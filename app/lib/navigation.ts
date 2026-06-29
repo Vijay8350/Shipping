@@ -41,9 +41,9 @@ export const NAVIGATION: NavSection[] = [
   {
     title: "Customer experience",
     items: [
-      { label: "Tracking Page", url: "#", phase: 5 },
-      { label: "Estimated Delivery (EDD)", url: "#", phase: 5 },
-      { label: "Return Page", url: "#", phase: 5 },
+      { label: "Tracking Page", url: "/customer-experience", phase: 5 },
+      { label: "Estimated Delivery (EDD)", url: "/customer-experience", phase: 5 },
+      { label: "Return Page", url: "/customer-experience", phase: 5 },
     ],
   },
   {
