@@ -8,11 +8,11 @@
 
 ## 0. Current repository state (read first)
 
-**Phases 0–5 are built.** Foundation + data/sync + carrier adapters + tracking/fulfill-back
-+ NDR/RTO/returns/notifications + the App Proxy storefront (tracking page, EDD, self-serve
-returns) are in and verified offline (typecheck, build, 41 unit tests pass). **Phase 6 is
-not built.** Work it from `BUILD-PHASES.md` (§14). **Next up: Phase 6** (Billing + usage
-metering + remaining 5 couriers + analytics + App Store compliance pass).
+**All phases (0–6) are built.** The full app is scaffolded and verified offline (typecheck,
+build, 54 unit tests pass). What remains is **live validation against real infrastructure +
+courier/Shopify sandboxes** (see the per-phase ⚠️ caveats and `docs/APP-STORE-COMPLIANCE.md`),
+not new feature phases. There is no "next phase" — further work is wiring/validation,
+hardening, and the manual submission tasks in the compliance checklist.
 
 What exists now (Phase 0 — foundation):
 - Non-embedded OAuth/SSO flow (§2): `app/routes/_index.tsx` (entry decision) →
@@ -110,6 +110,22 @@ What exists now (Phase 5 — App Proxy storefront):
   per-surface toggles, transit window). Phase 5 migration
   `prisma/migrations/4_phase5_storefront/`.
 
+What exists now (Phase 6 — billing/usage/couriers/analytics/compliance):
+- **Plans** `app/lib/plans.ts` (pure, tested): Free/Silver/Gold/Enterprise, included +
+  overage + features. **Billing** `app/services/billing.server.ts` (`appSubscriptionCreate`,
+  test mode unless `BILLING_LIVE=true`); `billing.tsx` + `billing.callback.tsx`.
+- **Usage metering** (§9.2): `meterShopUsage` consumes included shipments then emits
+  `appUsageRecordCreate` for overage (no double-bill via `UsageRecord.billed` +
+  `splitIncludedOverage`, tested); cron `USAGE_METERING` + `worker/processors/usage.ts`.
+- **All 7 couriers**: Delhivery + Shiprocket (bespoke) and Bluedart/DTDC/Amazon Shipping/
+  Shree Maruti/Trackon via `app/lib/carriers/generic/` (one generic REST adapter + configs,
+  shared canonical status normalizer). Registry resolves all 7; fixture tests cover them.
+  ⚠️ The 5 generic couriers use ASSUMED request/response shapes pending live specs (§14).
+- **Analytics dashboard** `app/services/analytics.server.ts` + `dashboard.tsx`: KPIs +
+  status/COD/payment/returns charts; orders-by-day + courier-wise are **plan-gated** premium.
+- **Compliance**: `docs/APP-STORE-COMPLIANCE.md` checklist. Schema: `Subscription.usageLineItemId`
+  + `currentPeriodStart`, Phase 6 migration `prisma/migrations/5_phase6_billing/`.
+
 ### Commands
 ```bash
 npm install                          # deps
@@ -145,10 +161,10 @@ Files in the repo and how they relate:
 | `JSY Logistics Dashboard.html` | ~430 KB **bundled visual design prototype** of the merchant dashboard. Use it as the UI/layout reference when building Polaris screens; it is not runnable app code. |
 | `docs/shopify-logistics-app-spec.md` | **Referenced everywhere as the FEATURE source of truth (the 16 modules) but DOES NOT EXIST yet.** If a phase needs feature detail from it, stop and ask the user for the spec rather than inventing module behavior. |
 
-**Next up: Phase 6** (Shopify Billing USD plans + plan gating, usage/overage emission
-with cap + no double-billing, remaining 5 adapters: Bluedart/DTDC/Amazon Shipping/Shree
-Maruti/Trackon, analytics dashboard, App Store compliance pass). Do not start it until
-asked — one phase per session.
+**All six build phases are complete.** Remaining work is live validation, not new phases:
+validate courier API shapes against sandboxes (§14), implement real data export/erasure in
+the compliance webhook handlers, handle `app_subscriptions/update`, and run the manual
+submission tasks in `docs/APP-STORE-COMPLIANCE.md`.
 
 ---
 

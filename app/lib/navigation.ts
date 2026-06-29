@@ -51,7 +51,7 @@ export const NAVIGATION: NavSection[] = [
     items: [
       { label: "Logistics Config", url: "/logistics", phase: 2 },
       { label: "Notifications", url: "/notifications", phase: 4 },
-      { label: "Billing & Plans", url: "#", phase: 6 },
+      { label: "Billing & Plans", url: "/billing", phase: 6 },
       { label: "Settings", url: "#", phase: 6 },
     ],
   },

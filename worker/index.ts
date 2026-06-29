@@ -7,10 +7,13 @@ import { processBackfill } from "./processors/backfill";
 import { processFulfillmentSync } from "./processors/fulfillment";
 import { processNotification } from "./processors/notifications";
 import { processTrackPoll, processTrackShipment } from "./processors/tracking";
+import { processMeterUsage } from "./processors/usage";
 import { processWebhook } from "./processors/webhooks";
 
 /** How often the tracking poller runs (CLAUDE.md §5). */
 const TRACKING_INTERVAL_MS = Number(process.env.TRACKING_INTERVAL_MS || 15 * 60 * 1000);
+/** How often usage metering runs (default daily). */
+const USAGE_INTERVAL_MS = Number(process.env.USAGE_INTERVAL_MS || 24 * 60 * 60 * 1000);
 
 /**
  * BullMQ worker process (CLAUDE.md §5). Consumes jobs the web process enqueues. Phase 1
@@ -31,6 +34,7 @@ async function main() {
     new Worker(QUEUES.TRACKING_SHIPMENT, processTrackShipment, { connection, concurrency: 4 }),
     new Worker(QUEUES.FULFILLMENT_SYNC, processFulfillmentSync, { connection, concurrency: 3 }),
     new Worker(QUEUES.NOTIFICATIONS, processNotification, { connection, concurrency: 5 }),
+    new Worker(QUEUES.USAGE_METERING, processMeterUsage, { connection, concurrency: 1 }),
   ];
 
   // Schedule the repeatable tracking poll (idempotent by scheduler id).
@@ -40,7 +44,9 @@ async function main() {
     { every: TRACKING_INTERVAL_MS },
     { name: "poll" },
   );
-  console.log(`[worker] tracking poll scheduled every ${TRACKING_INTERVAL_MS}ms`);
+  const usageQueue = new Queue(QUEUES.USAGE_METERING, { connection });
+  await usageQueue.upsertJobScheduler("usage-meter", { every: USAGE_INTERVAL_MS }, { name: "meter" });
+  console.log(`[worker] tracking poll every ${TRACKING_INTERVAL_MS}ms; usage metering every ${USAGE_INTERVAL_MS}ms`);
 
   for (const w of workers) {
     w.on("failed", (job, err) =>

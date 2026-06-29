@@ -16,6 +16,8 @@ export const QUEUES = {
   FULFILLMENT_SYNC: "fulfillment-sync",
   /** Notification dispatcher — email/SMS via the provider interface (Phase 4, §9.6). */
   NOTIFICATIONS: "notifications",
+  /** Repeatable usage metering — emits Shopify overage charges (Phase 6, §9.2). */
+  USAGE_METERING: "usage-metering",
 } as const;
 
 export type QueueName = (typeof QUEUES)[keyof typeof QUEUES];

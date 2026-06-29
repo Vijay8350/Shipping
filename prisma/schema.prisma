@@ -324,7 +324,9 @@ model Subscription {
   shop                   Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
   plan                   String
   shopifyAppSubscriptionId String?  @unique
+  usageLineItemId        String? // Shopify usage line item id for appUsageRecordCreate
   status                 String // "active" | "cancelled" | "pending" | "frozen"
+  currentPeriodStart     DateTime?
   currentPeriodEnd       DateTime?
   createdAt              DateTime  @default(now())
   updatedAt              DateTime  @updatedAt

@@ -1,5 +1,7 @@
 import { DelhiveryAdapter } from "./delhivery";
 import { ShiprocketAdapter } from "./shiprocket";
+import { GenericRestAdapter } from "./generic/adapter";
+import { GENERIC_COURIER_CONFIGS } from "./generic/configs";
 import type { AdapterContext, AdapterFactory, CarrierAdapter } from "./types";
 
 /**
@@ -11,6 +13,13 @@ import type { AdapterContext, AdapterFactory, CarrierAdapter } from "./types";
 const FACTORIES: Record<string, AdapterFactory> = {
   delhivery: (ctx) => new DelhiveryAdapter(ctx),
   shiprocket: (ctx) => new ShiprocketAdapter(ctx),
+  // Phase 6 couriers via the generic REST adapter (one factory per config).
+  ...Object.fromEntries(
+    GENERIC_COURIER_CONFIGS.map((cfg) => [
+      cfg.key,
+      ((ctx: AdapterContext) => new GenericRestAdapter(cfg, ctx)) as AdapterFactory,
+    ]),
+  ),
 };
 
 export interface CredentialField {
@@ -62,6 +71,12 @@ export const SUPPORTED_COURIERS: CourierMeta[] = [
       },
     ],
   },
+  ...GENERIC_COURIER_CONFIGS.map((cfg) => ({
+    key: cfg.key,
+    displayName: cfg.displayName,
+    hasSandbox: Boolean(cfg.stagingBase),
+    credentialFields: cfg.credentialFields,
+  })),
 ];
 
 export function isSupportedCourier(courierKey: string): boolean {
