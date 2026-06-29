@@ -1,8 +1,9 @@
 # Shopify app config (CLAUDE.md §2, §10). This app is NON-EMBEDDED.
-# Replace client_id and the URLs with your real values, or manage via `shopify app config`.
+# Linked to "JSY Logistics" via `shopify app config link`. Push changes with
+# `npm run deploy:shopify`.
 
-name = "shipping-management"
-client_id = "REPLACE_WITH_SHOPIFY_API_KEY"
+client_id = "59e0cb799eae8389c240848841e37ee2"
+name = "JSY Logistics"
 application_url = "https://ship.apanjob.com"
 
 # THE key fact: non-embedded. No App Bridge, no admin iframe (CLAUDE.md §2).
@@ -19,7 +20,7 @@ redirect_urls = [
 ]
 
 [webhooks]
-api_version = "2025-01"
+api_version = "2025-10"
 
   # Mandatory GDPR/compliance webhooks (CLAUDE.md §9.5). HMAC-verified at /webhooks.
   [webhooks.privacy_compliance]
@@ -36,3 +37,7 @@ prefix = "apps"
 
 [pos]
 embedded = false
+
+[build]
+include_config_on_deploy = true
+automatically_update_urls_on_dev = true

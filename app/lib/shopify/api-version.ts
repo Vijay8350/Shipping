@@ -4,4 +4,4 @@
  * authenticated requests; this constant is for the plain fetch client used by the
  * worker (which has no Remix request context).
  */
-export const ADMIN_API_VERSION = "2025-01";
+export const ADMIN_API_VERSION = "2025-10";
