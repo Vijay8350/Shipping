@@ -1,5 +1,6 @@
 import "@shopify/shopify-app-remix/adapters/node";
 import {
+  ApiVersion,
   AppDistribution,
   DeliveryMethod,
   shopifyApp,
@@ -25,7 +26,8 @@ import { commitShopSession, getShopSession } from "./session.server";
 const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY!,
   apiSecretKey: process.env.SHOPIFY_API_SECRET || "",
-  // apiVersion omitted -> library default (current stable GraphQL Admin API, CLAUDE.md §10).
+  // Pinned to match shopify.app toml [webhooks] api_version and ADMIN_API_VERSION (§10).
+  apiVersion: ApiVersion.October25,
   scopes: process.env.SCOPES?.split(","),
   appUrl: process.env.SHOPIFY_APP_URL || "",
   authPathPrefix: "/auth",
