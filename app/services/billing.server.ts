@@ -69,7 +69,7 @@ export async function createSubscription(
     lineItems.push({
       plan: {
         appUsagePricingDetails: {
-          terms: `₹/shipment beyond ${plan.included} included shipments`,
+          terms: `Per shipment beyond ${plan.included} included shipments`,
           cappedAmount: usd(plan.cappedAmountCents),
         },
       },

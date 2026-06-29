@@ -39,18 +39,30 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const q = (url.searchParams.get("q") ?? "").trim();
   const page = Math.max(1, Number(url.searchParams.get("page") ?? "1") || 1);
 
-  const where: Prisma.OrderWhereInput = { shopId: shopRow?.id ?? "__none__" };
-  if (tab === "unfulfilled") where.fulfillmentStatus = { in: ["unfulfilled", null] as never };
-  else if (tab === "fulfilled") where.fulfillmentStatus = "fulfilled";
-  else if (tab === "partial")
-    where.fulfillmentStatus = { in: ["partial", "partially_fulfilled"] };
-  if (q) {
-    where.OR = [
-      { name: { contains: q, mode: "insensitive" } },
-      { email: { contains: q, mode: "insensitive" } },
-      { customerName: { contains: q, mode: "insensitive" } },
-    ];
+  // Compose filters via AND so the tab filter and the search OR don't collide.
+  const and: Prisma.OrderWhereInput[] = [];
+  if (tab === "unfulfilled") {
+    // Shopify leaves fulfillmentStatus null for brand-new unfulfilled orders.
+    and.push({ OR: [{ fulfillmentStatus: "unfulfilled" }, { fulfillmentStatus: null }] });
+  } else if (tab === "fulfilled") {
+    and.push({ fulfillmentStatus: "fulfilled" });
+  } else if (tab === "partial") {
+    and.push({ fulfillmentStatus: { in: ["partial", "partially_fulfilled"] } });
   }
+  if (q) {
+    and.push({
+      OR: [
+        { name: { contains: q, mode: "insensitive" } },
+        { email: { contains: q, mode: "insensitive" } },
+        { customerName: { contains: q, mode: "insensitive" } },
+      ],
+    });
+  }
+
+  const where: Prisma.OrderWhereInput = {
+    shopId: shopRow?.id ?? "__none__",
+    ...(and.length ? { AND: and } : {}),
+  };
 
   const [orders, total] = await prisma.$transaction([
     prisma.order.findMany({
