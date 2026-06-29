@@ -3,7 +3,7 @@
 
 name = "shipping-management"
 client_id = "REPLACE_WITH_SHOPIFY_API_KEY"
-application_url = "https://app.yourdomain.com"
+application_url = "https://ship.apanjob.com"
 
 # THE key fact: non-embedded. No App Bridge, no admin iframe (CLAUDE.md §2).
 embedded = false
@@ -14,8 +14,8 @@ scopes = "read_orders,write_orders,read_fulfillments,write_fulfillments,read_pro
 
 [auth]
 redirect_urls = [
-  "https://app.yourdomain.com/auth/callback",
-  "https://app.yourdomain.com/auth/login"
+  "https://ship.apanjob.com/auth/callback",
+  "https://ship.apanjob.com/auth/login"
 ]
 
 [webhooks]
@@ -23,14 +23,14 @@ api_version = "2025-01"
 
   # Mandatory GDPR/compliance webhooks (CLAUDE.md §9.5). HMAC-verified at /webhooks.
   [webhooks.privacy_compliance]
-  customer_data_request_url = "https://app.yourdomain.com/webhooks"
-  customer_deletion_url = "https://app.yourdomain.com/webhooks"
-  shop_deletion_url = "https://app.yourdomain.com/webhooks"
+  customer_data_request_url = "https://ship.apanjob.com/webhooks"
+  customer_deletion_url = "https://ship.apanjob.com/webhooks"
+  shop_deletion_url = "https://ship.apanjob.com/webhooks"
 
 # App Proxy (CLAUDE.md §10): storefront pages served from OUR domain through the proxy.
-# Storefront URL https://<shop>/apps/ils/<path>  ->  https://app.yourdomain.com/proxy/<path>
+# Storefront URL https://<shop>/apps/ils/<path>  ->  https://ship.apanjob.com/proxy/<path>
 [app_proxy]
-url = "https://app.yourdomain.com/proxy"
+url = "https://ship.apanjob.com/proxy"
 subpath = "ils"
 prefix = "apps"
 
