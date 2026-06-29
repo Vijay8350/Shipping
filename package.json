@@ -12,6 +12,10 @@
     "start": "remix-serve ./build/server/index.js",
     "worker:dev": "tsx watch worker/index.ts",
     "worker:start": "tsx worker/index.ts",
+    "shopify": "shopify",
+    "config:link": "shopify app config link",
+    "config:push": "shopify app config push",
+    "deploy:shopify": "shopify app deploy",
     "setup": "prisma generate && prisma migrate deploy",
     "prisma": "prisma",
     "typecheck": "tsc --noEmit",
@@ -36,6 +40,7 @@
   },
   "devDependencies": {
     "@remix-run/dev": "^2.16.1",
+    "@shopify/cli": "^4.3.0",
     "@types/node": "^22.10.5",
     "@types/pdfkit": "^0.13.9",
     "@types/react": "^18.2.0",
