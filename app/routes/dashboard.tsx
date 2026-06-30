@@ -26,7 +26,7 @@ function Stat({ label, value, to, tone }: { label: string; value: number; to: st
     <Link to={to} style={{ textDecoration: "none" }}>
       <Card>
         <BlockStack gap="100">
-          <Text as="span" variant="heading2xl" tone={tone}>{value}</Text>
+          <Text as="span" variant="heading2xl" tone={tone} numeric>{value}</Text>
           <Text as="span" variant="bodySm" tone="subdued">{label}</Text>
         </BlockStack>
       </Card>

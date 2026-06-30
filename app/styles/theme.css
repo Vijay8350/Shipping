@@ -1,0 +1,79 @@
+/*
+ * JSY Logistics theme — re-skins Polaris to match the design prototype
+ * ("JSY Logistics Dashboard.html"): indigo brand, Plus Jakarta Sans UI type,
+ * JetBrains Mono for numbers, soft-gray surfaces. Loaded AFTER Polaris styles so
+ * these token overrides win. Touches color/typography tokens only (no layout).
+ */
+
+:root {
+  /* Typography */
+  --p-font-family-sans: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --p-font-family-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Brand → JSY indigo (#3b4fe4) */
+  --p-color-bg-fill-brand: #3b4fe4;
+  --p-color-bg-fill-brand-hover: #2f41c9;
+  --p-color-bg-fill-brand-active: #1d63d1;
+  --p-color-bg-fill-brand-selected: #1d63d1;
+  --p-color-bg-fill-brand-disabled: #c7cdfa;
+  --p-color-text-brand: #3b4fe4;
+  --p-color-text-brand-hover: #1d63d1;
+  --p-color-text-brand-on-bg-fill: #ffffff;
+  --p-color-icon-brand: #3b4fe4;
+  --p-color-border-brand: #3b4fe4;
+  --p-color-border-focus: #3b4fe4;
+
+  /* Links */
+  --p-color-text-link: #3b4fe4;
+  --p-color-text-link-hover: #1d63d1;
+  --p-color-text-link-active: #1d63d1;
+
+  /* Tinted selected/secondary surfaces (indigo wash from the prototype) */
+  --p-color-bg-surface-selected: #eef0fe;
+  --p-color-bg-surface-brand: #eef0fe;
+  --p-color-bg-fill-transparent-selected: #eef0fe;
+
+  /* App + surfaces */
+  --p-color-bg: #f0f1f4;
+  --p-color-bg-surface: #ffffff;
+  --p-color-border: #e7e9ef;
+  --p-color-text: #1a1a2e;
+  --p-color-text-secondary: #5a5e73;
+}
+
+/* Apply the UI font everywhere. */
+html,
+body,
+button,
+input,
+select,
+textarea,
+.Polaris-Text {
+  font-family: var(--p-font-family-sans);
+}
+
+/* Numbers / metrics → JetBrains Mono (KPI cards, totals, AWBs). */
+.Polaris-Text--numeric {
+  font-family: var(--p-font-family-mono);
+  letter-spacing: -0.01em;
+}
+
+/* Slightly softer, more elevated cards to match the prototype. */
+.Polaris-Card {
+  border-radius: 14px;
+}
+
+/* Primary buttons: indigo with the prototype's rounded feel. */
+.Polaris-Button--variantPrimary {
+  border-radius: 10px;
+}
+
+/* Selected nav item gets the indigo wash + brand text. */
+.Polaris-Navigation__Item--selected {
+  background: #eef0fe;
+  color: #3b4fe4;
+}
+.Polaris-Navigation__Item--selected .Polaris-Navigation__Icon svg {
+  fill: #3b4fe4;
+}
