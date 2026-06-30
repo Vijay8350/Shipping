@@ -101,7 +101,6 @@ export function AppShell({
         onNavigationDismiss={toggleMobileNav}
         logo={{
           width: 150,
-          source: LOGO_URI,
           topBarSource: LOGO_URI,
           accessibilityLabel: "JSY Logistics",
           url: "/dashboard",
