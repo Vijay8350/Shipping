@@ -10,7 +10,6 @@ import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prism
 import prisma from "./db.server";
 import { encrypt } from "./lib/crypto.server";
 import { enqueueOrderBackfill } from "./lib/queues.server";
-import { commitShopSession, getShopSession } from "./session.server";
 
 /**
  * NON-EMBEDDED Shopify app (CLAUDE.md §2).
@@ -76,16 +75,11 @@ const shopify = shopifyApp({
       // coalesced per shop via a stable jobId.
       await enqueueOrderBackfill({ shop: session.shop, limit: 100 });
 
-      // Set our own signed session cookie and land on the dashboard (CLAUDE.md §2).
-      const appSession = await getShopSession(new Request(process.env.SHOPIFY_APP_URL));
-      appSession.set("shop", session.shop);
-      throw new Response(null, {
-        status: 302,
-        headers: {
-          Location: "/dashboard",
-          "Set-Cookie": await commitShopSession(appSession),
-        },
-      });
+      // NOTE: do NOT throw a redirect/Response here — this shopify-app-remix version
+      // treats a thrown Response in afterAuth as an error (500), even though OAuth
+      // already succeeded. The library redirects to "/" after auth, and our `_index`
+      // route performs the SSO ("offline session exists → set our cookie → /dashboard",
+      // CLAUDE.md §2). So afterAuth only does side-effects and returns.
     },
   },
 });
