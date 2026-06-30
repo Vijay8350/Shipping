@@ -11,6 +11,11 @@ import enTranslations from "@shopify/polaris/locales/en.json";
 
 import { NAVIGATION } from "../lib/navigation";
 
+/** Inline SVG "JSY Logistics" wordmark (prototype branding) used as the Frame logo —
+ *  avoids a broken <img> and needs no asset file. */
+const LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="150" height="30" viewBox="0 0 150 30"><text x="0" y="22" font-family="'Plus Jakarta Sans',system-ui,sans-serif" font-size="20" font-weight="800" fill="#3b4fe4">JSY</text><text x="48" y="22" font-family="'Plus Jakarta Sans',system-ui,sans-serif" font-size="14" font-weight="600" fill="#1a1a2e">Logistics</text></svg>`;
+const LOGO_URI = `data:image/svg+xml;utf8,${encodeURIComponent(LOGO_SVG)}`;
+
 /**
  * Standalone Polaris shell rendered on OUR domain (CLAUDE.md §2: non-embedded —
  * this is NOT inside the Shopify admin iframe). Collapsible sidebar + top bar with
@@ -72,7 +77,7 @@ export function AppShell({
         },
       ]}
       name={shop}
-      detail="Shipping Management"
+      detail="JSY Logistics"
       initials={shop.slice(0, 1).toUpperCase()}
       open={userMenuActive}
       onToggle={toggleUserMenu}
@@ -95,9 +100,11 @@ export function AppShell({
         showMobileNavigation={mobileNavActive}
         onNavigationDismiss={toggleMobileNav}
         logo={{
-          width: 140,
-          topBarSource: undefined,
-          accessibilityLabel: "Shipping Management",
+          width: 150,
+          source: LOGO_URI,
+          topBarSource: LOGO_URI,
+          accessibilityLabel: "JSY Logistics",
+          url: "/dashboard",
         }}
       >
         {children}
