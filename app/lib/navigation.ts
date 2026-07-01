@@ -27,7 +27,7 @@ export const NAVIGATION: NavSection[] = [
       { label: "Shipping / AWB", url: "/orders?tab=unfulfilled", phase: 2 },
       { label: "Order Tracking", url: "/tracking", phase: 3 },
       { label: "Pickup Requests", url: "/pickups", phase: 3 },
-      { label: "Automation Rules", url: "#", phase: 3 },
+      { label: "Automation Rules", url: "/automation", phase: 3 },
     ],
   },
   {
@@ -52,7 +52,7 @@ export const NAVIGATION: NavSection[] = [
       { label: "Logistics Config", url: "/logistics", phase: 2 },
       { label: "Notifications", url: "/notifications", phase: 4 },
       { label: "Billing & Plans", url: "/billing", phase: 6 },
-      { label: "Settings", url: "#", phase: 6 },
+      { label: "Settings", url: "/settings", phase: 6 },
     ],
   },
 ];
